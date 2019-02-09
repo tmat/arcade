@@ -28,8 +28,6 @@
 
     <PipelineArtifactsAssetManifestFilePath>$(ArtifactsLogDir)PipelineArtifactsPublishingManifests\$(OS)-$(PlatformName)-$(AGENT_JOBNAME).xml</PipelineArtifactsAssetManifestFilePath>
 
-    <SymbolPackagesDir>$(ArtifactsTmpDir)SymbolPackages\</SymbolPackagesDir>
-
     <PublishToBlobFeedFlatContainer Condition="'$(PublishToBlobFeedFlatContainer)' == ''">false</PublishToBlobFeedFlatContainer>
 
     <PublishDependsOnTargets Condition="$(PublishToAzure) and '$(PublishToBlobFeedFlatContainer)' != 'true'">$(PublishDependsOnTargets);PublishPackagesToBlobFeed</PublishDependsOnTargets>
@@ -48,34 +46,20 @@
 
   <Target Name="BeforePublish">
     <ItemGroup>
-      <ExistingSymbolPackages Include="$(ArtifactsShippingPackagesDir)*.symbols.nupkg" IsShipping="true" />
-      <ExistingSymbolPackages Include="$(ArtifactsNonShippingPackagesDir)*.symbols.nupkg" IsShipping="false" />
+      <PortableSymbolPackages Include="$(ArtifactsShippingPackagesDir)*.snupkg" IsShipping="true" />
+      <PortableSymbolPackages Include="$(ArtifactsNonShippingPackagesDir)*.snupkg" IsShipping="false" />
+
+      <LegacySymbolPackages Include="$(ArtifactsShippingPackagesDir)*.symbols.nupkg" IsShipping="true" />
+      <LegacySymbolPackages Include="$(ArtifactsNonShippingPackagesDir)*.symbols.nupkg" IsShipping="false" />
 
       <PackagesToPublish Include="$(ArtifactsShippingPackagesDir)*.nupkg" IsShipping="true" />
       <PackagesToPublish Include="$(ArtifactsNonShippingPackagesDir)*.nupkg" IsShipping="false" />
-      <PackagesToPublish Remove="@(ExistingSymbolPackages)" />
-
-      <PackagesToPublish Update="@(PackagesToPublish)">
-        <SymbolPackageToGenerate Condition="!Exists('%(RootDir)%(Directory)%(Filename).symbols.nupkg')">$(SymbolPackagesDir)%(Filename).symbols.nupkg</SymbolPackageToGenerate>
-      </PackagesToPublish>
-
-      <SymbolPackagesToGenerate Include="@(PackagesToPublish->'%(SymbolPackageToGenerate)')" Condition="'%(PackagesToPublish.SymbolPackageToGenerate)' != ''">
-        <OriginalPackage>%(PackagesToPublish.Identity)</OriginalPackage>
-        <IsShipping>%(PackagesToPublish.IsShipping)</IsShipping>
-      </SymbolPackagesToGenerate>
+      <PackagesToPublish Include="@(PortableSymbolPackages)" />
     </ItemGroup>
-
-    <!--
-      If a symbol package doesn't exist yet we assume that the regular package contains Portable PDBs.
-      Such packages can act as symbol packages since they have the same structure.
-      We just need to copy them to *.symbols.nupkg.
-    -->
-    <MakeDir Directories="$(SymbolPackagesDir)" />
-    <Copy SourceFiles="@(SymbolPackagesToGenerate->'%(OriginalPackage)')" DestinationFiles="@(SymbolPackagesToGenerate)" />
 
     <!-- Orchestrated Build blob storage -->
     <ItemGroup>
-      <ItemsToPushToBlobFeed Include="@(PackagesToPublish);@(ExistingSymbolPackages);@(SymbolPackagesToGenerate)">
+      <ItemsToPushToBlobFeed Include="@(PackagesToPublish)">
         <ManifestArtifactData Condition="'%(IsShipping)' != 'true'">NonShipping=true</ManifestArtifactData>
       </ItemsToPushToBlobFeed>
     </ItemGroup>
@@ -102,7 +86,6 @@
   <Target Name="PublishToSourceBuildStorage">
     <!-- Source Build local storage -->    
     <Copy SourceFiles="@(PackagesToPublish)" DestinationFolder="$(DotNetOutputBlobFeedDir)packages" />
-    <Copy SourceFiles="@(ExistingSymbolPackages);@(SymbolPackagesToGenerate)" DestinationFolder="$(DotNetOutputBlobFeedDir)assets" />
   </Target>
 
   <Target Name="PublishToAzureDevOpsArtifacts">
@@ -210,7 +193,7 @@
       <!--
         Publish Portable PDBs contained in symbol packages.
       -->
-      <PackagesToPublishToSymbolServer Include="@(ExistingSymbolPackages);@(SymbolPackagesToGenerate)"/>
+      <PackagesToPublishToSymbolServer Include="@(PortableSymbolPackages);@(LegacySymbolPackages)"/>
     </ItemGroup>
 
     <PropertyGroup>

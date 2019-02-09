@@ -14,6 +14,7 @@
     
     <ItemGroup>
       <_BuiltPackages Include="$(ArtifactsShippingPackagesDir)*.nupkg" />
+      <_BuiltPackages Include="$(ArtifactsShippingPackagesDir)*.snupkg" />
     </ItemGroup>
 
     <!-- Force references among packages to use exact versions (see https://github.com/NuGet/Home/issues/7213) -->

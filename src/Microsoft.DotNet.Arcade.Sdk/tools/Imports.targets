@@ -42,6 +42,17 @@
 
     <IsSwixProject>false</IsSwixProject>
     <IsSwixProject Condition="'$(VisualStudioInsertionComponent)' != '' and '$(IsVsixProject)' != 'true'">true</IsSwixProject>
+
+  </PropertyGroup>
+
+  <!--
+    Produce .snupkg packages for projects that build with Portable PDBs.
+    Produce .symbols.nupkg packages for projects that build Windows PDBs.
+  -->
+  <PropertyGroup Condition="'$(IsPackable)' == 'true' and '$(IncludeBuildOutput)' != 'false' and '$(DebugType)' != 'embedded'">
+    <IncludeSymbols Condition="'$(IncludeSymbols)' == ''">true</IncludeSymbols>
+    <SymbolPackageFormat Condition="'$(DebugType)' == 'portable'">snupkg</SymbolPackageFormat>
+    <SymbolPackageFormat Condition="'$(DebugType)' != 'portable'">symbols.nupkg</SymbolPackageFormat>
   </PropertyGroup>
 
   <Import Project="StrongName.targets"/>
